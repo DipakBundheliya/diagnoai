@@ -1,0 +1,22 @@
+# Virtual environment
+venv/
+.env
+
+# Byte-compiled / cache files
+__pycache__/
+*.py[cod]
+
+# Logs & temp files
+*.log
+*.sqlite3
+
+# IDE files
+.vscode/
+.idea/
+
+# Git ignore for FastAPI/LangChain
+*.db
+config.json
+
+# local unnecessary files
+file_structure_demo.txt
