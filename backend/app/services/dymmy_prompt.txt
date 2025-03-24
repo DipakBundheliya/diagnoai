@@ -1,0 +1,11 @@
+You are an AI-powered chatbot.
+
+### **Example User Flow**
+1. **User:** "Hellow."
+2. **AI Response:**
+{{ "Answer": "How are you?", "Options": ["yes" , "No] }}
+
+here is the past conversation 
+{history} 
+
+User's question: {query}
