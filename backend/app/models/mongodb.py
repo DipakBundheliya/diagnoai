@@ -1,7 +1,7 @@
 import os
 from pymongo import MongoClient
 from dotenv import load_dotenv
-# from backend.app.services.langchain_service import get_summary # Run this command for get root directory at parent folder : export PYTHONPATH=$(pwd)
+from langchain_groq import ChatGroq 
 
 load_dotenv()
 MONGO_URI = os.getenv("MONGO_URI")
@@ -10,22 +10,39 @@ client = MongoClient(MONGO_URI)
 db = client["Langchain_user_history"]
 history_collection = db["user_conversation"]
 
+# Initialize llm
+llm = ChatGroq(
+    model="llama-3.1-8b-instant",
+    temperature=0,
+    max_tokens=1024,
+    timeout=10,
+    max_retries=2,
+)
+
+def get_summary(text):
+    # Fetch summary from MongoDB
+    llm_inp = "Summarize below content upto max 5 lines ,do not unnecessary words or sentences , if there is already any summary also consider that function \n" + text
+    summary = llm.invoke(llm_inp).content
+    summary = "Summary of previous conversation : " + summary
+    return summary
+
+
 def save_chat_history(user_id: str, query: str, response: str):
     """Save user chat history to MongoDB"""
     existing_chat = history_collection.find_one({"user_id": user_id})
     
     if existing_chat:
         if len(existing_chat["conversation"].split("\n")) >= 10 :
+            # breakpoint()
             # Filter previous messages when conversation becomes above 10 and summarize it
             total_conversation_len = len(existing_chat["conversation"].split("\n")) + 2 # 2 for the new query and response
             summarize_conv_len = total_conversation_len - 10
             summzarize_inp = "\n".join(existing_chat["conversation"].split("\n")[:summarize_conv_len])
             
-            from backend.app.services.langchain_service import get_summary
             summzarize_content = get_summary(summzarize_inp)
             updated_conversation = existing_chat["conversation"]
             updated_conversation += f"\nUser: {query}\nAI: {response}"
-            updated_conversation = "\n".join(existing_chat["conversation"].split("\n")[-10:])
+            updated_conversation = "\n".join(updated_conversation.split("\n")[-10:])
             updated_conversation = summzarize_content + f"\n{updated_conversation}"
             print(updated_conversation.split("\n") , len(updated_conversation.split("\n")))
             history_collection.update_one(
@@ -59,4 +76,4 @@ def clear_chat_history(user_id: str):
     """Delete chat history for a user"""
     history_collection.delete_many({"user_id": user_id})
 
-save_chat_history("1234561" , "hello" , "hi")
+save_chat_history("212" , "hello" , "hi")

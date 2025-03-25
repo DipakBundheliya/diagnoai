@@ -3,7 +3,7 @@ import json
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
-# from backend.app.models.mongodb import get_chat_history , save_chat_history # Run this command for get root directory at parent folder : export PYTHONPATH=$(pwd)
+from backend.app.models.mongodb import get_chat_history , save_chat_history # Run this command for get root directory at parent folder : export PYTHONPATH=$(pwd)
 # Load environment variables from .env file
 load_dotenv()
 
@@ -32,33 +32,58 @@ chat_prompt = ChatPromptTemplate.from_template(system_prompt)
 
 def get_history(user_id):
     # Fetch history from MongoDB
-    from backend.app.models.mongodb import get_chat_history 
     history = get_chat_history(user_id)
     if not history:
         return ""
     return history
 
-def get_ai_response(query , user_id):
+def get_ai_response(query , user_id , max_retries=4):
+    breakpoint()
     history = get_history(user_id) 
     formatted_prompt = chat_prompt.format(history=history , query=query)
-    llm_response = llm.invoke(formatted_prompt).content
 
-    from backend.app.models.mongodb import save_chat_history
-    save_chat_history(user_id , query , llm_response) 
-    
-    return json.loads(llm_response)
-
-def get_summary(text):
-    # Fetch summary from MongoDB
-    llm_inp = "Summarize below content upto max 2 lines ,do not unnecessary words or sentences \n" + text
-    summary = llm.invoke(llm_inp).content
-    summary = "Summary of previous conversation : " + summary
-    return summary
+    try:
+        llm_response = llm.invoke(formatted_prompt).content
+        json_response = json.loads(llm_response)
+        save_chat_history(user_id , query , llm_response) 
+        return json_response
+    except json.JSONDecodeError as e:
+        formatted_prompt = f"""
+            convert below unstructured json structure to correct structure and strongly consider that you return only correct json structure without any extra single word or sentence
+            Please correct it and respond ONLY with valid JSON in one of these formats:
+                    
+            Format 1: {{"Question": "your question", "Options": ["option1", "option2"]}}
+            Format 2: {{"Disease": "disease name", "Advice": "medical advice"}}
+            
+            Your invalid response was:
+            {llm_response}
+            
+            Error: {str(e)}
+            
+            Please provide the corrected JSON response:
+            """
+        for attempt in max_retries:
+            try:
+                re_llm_response = llm.invoke(formatted_prompt)
+                json_response = json.loads(re_llm_response)
+                save_chat_history(user_id , query , llm_response) 
+                return json_response
+            except json.JSONDecodeError as e:
+                if attempt < max_retries:
+                    formatted_prompt += f"\nyour previous response was still invalid JSON which is {re_llm_response}, please provide the corrected JSON response"
+                else:
+                    # for attempt in max_retries:
+                    json_response = {
+                        "error" : "Invalid json response",
+                        "origional_response" : re_llm_response
+                    }
+                    return json_response
 
 # response_json = get_ai_response(query="I feel unwell" , user_id="11221122") 
-while True:
-    query = input("ask questions , type end to exit")
-    if query == "end":
-        break
-    response_json = get_ai_response(query=query , user_id="11221122")
-    print(response_json) 
+# while True:
+    # query = input("ask questions , type end to exit")
+    # if query == "end":
+        # break
+    # response_json = get_ai_response(query=query , user_id="112211220")
+    # print(response_json) 
+get_ai_response(query="fewer",user_id=1122112211)
