@@ -1,1 +1,1 @@
-# DiagoAI
+# DiagnoAI

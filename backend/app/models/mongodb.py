@@ -32,17 +32,17 @@ def save_chat_history(user_id: str, query: str, response: str):
     existing_chat = history_collection.find_one({"user_id": user_id})
     
     if existing_chat:
-        if len(existing_chat["conversation"].split("\n")) >= 10 :
+        if len(existing_chat["conversation"].split("\n")) >= 40 :
             # breakpoint()
-            # Filter previous messages when conversation becomes above 10 and summarize it
+            # Filter previous messages when conversation becomes above 40 and summarize it
             total_conversation_len = len(existing_chat["conversation"].split("\n")) + 2 # 2 for the new query and response
-            summarize_conv_len = total_conversation_len - 10
+            summarize_conv_len = total_conversation_len - 40
             summzarize_inp = "\n".join(existing_chat["conversation"].split("\n")[:summarize_conv_len])
             
             summzarize_content = get_summary(summzarize_inp)
             updated_conversation = existing_chat["conversation"]
             updated_conversation += f"\nUser: {query}\nAI: {response}"
-            updated_conversation = "\n".join(updated_conversation.split("\n")[-10:])
+            updated_conversation = "\n".join(updated_conversation.split("\n")[-40:])
             updated_conversation = summzarize_content + f"\n{updated_conversation}"
             print(updated_conversation.split("\n") , len(updated_conversation.split("\n")))
             history_collection.update_one(
@@ -76,4 +76,4 @@ def clear_chat_history(user_id: str):
     """Delete chat history for a user"""
     history_collection.delete_many({"user_id": user_id})
 
-save_chat_history("212" , "hello" , "hi")
+# save_chat_history("212" , "hello" , "hi") 
