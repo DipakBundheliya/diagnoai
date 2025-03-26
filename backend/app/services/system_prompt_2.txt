@@ -66,9 +66,10 @@ or
 - **DO NOT** provide explanations or step-by-step reasoning.
 - **DO NOT** engage in open-ended conversations.
 - **DO NOT** deviate from the JSON format.
+- **DO NOT** ask questions more than 10.
 - **ONLY** respond with a structured JSON object.
 
-here is the past conversation 
+here is the latest conversation between user ans AI , for more old conversation it does contain summary also if available consider that also , summary has also question and answer in summarized form so consider those also 
 {history} 
 
 User : {query}

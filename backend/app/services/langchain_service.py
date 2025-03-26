@@ -12,7 +12,7 @@ groq_key = os.getenv("GROQ_API_KEY")
 
 # Initialize llm
 llm = ChatGroq(
-    model="llama-3.1-8b-instant",
+    model="llama-3.3-70b-versatile",
     temperature=0,
     max_tokens=1024,
     timeout=10,
@@ -21,7 +21,7 @@ llm = ChatGroq(
 
 def load_system_prompt():
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    file_path = os.path.join(script_dir, "system_prompt.txt")  # Construct full path
+    file_path = os.path.join(script_dir, "system_prompt_2.txt")  # Construct full path
 
     with open(file_path , "r") as file:
         return file.read()
@@ -37,13 +37,13 @@ def get_history(user_id):
         return ""
     return history
 
-def get_ai_response(query , user_id , max_retries=4):
-    breakpoint()
+def get_ai_response(query , user_id , max_retries=4): 
     history = get_history(user_id) 
     formatted_prompt = chat_prompt.format(history=history , query=query)
 
     try:
         llm_response = llm.invoke(formatted_prompt).content
+        # breakpoint()
         json_response = json.loads(llm_response)
         save_chat_history(user_id , query , llm_response) 
         return json_response
@@ -79,11 +79,12 @@ def get_ai_response(query , user_id , max_retries=4):
                     }
                     return json_response
 
-# response_json = get_ai_response(query="I feel unwell" , user_id="11221122") 
-# while True:
-    # query = input("ask questions , type end to exit")
-    # if query == "end":
-        # break
-    # response_json = get_ai_response(query=query , user_id="112211220")
-    # print(response_json) 
-get_ai_response(query="fewer",user_id=1122112211)
+if __name__ == "__main__":
+    # response_json = get_ai_response(query="I feel unwell" , user_id="11221122") 
+    while True:
+        query = input("ask questions , type end to exit")
+        if query == "end":
+            break
+        response_json = get_ai_response(query=query , user_id="98780266")
+        print(response_json) 
+    # get_ai_response(query="fewer",user_id=9878098)
