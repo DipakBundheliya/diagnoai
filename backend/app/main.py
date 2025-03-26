@@ -1,8 +1,18 @@
 from fastapi import FastAPI
 from backend.app.api.routes import router # Import the router
+from fastapi.middleware.cors import CORSMiddleware
 
 # create fastapi app instance
 app = FastAPI(title = "DiagnoAI API" , version="1.0.0")
+
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # For development only, specify exact domains in production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Register API routes
 app.include_router(router)

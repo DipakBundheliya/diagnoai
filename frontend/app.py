@@ -4,78 +4,90 @@ import requests
 # API Base URL
 API_URL = "http://127.0.0.1:8000/chat"
 
-# Static User ID (In future, implement authentication)
-USER_ID = "13121412"
+# Static User ID (can be enhanced with authentication later)
+USER_ID = "212321"
 
 # Initialize session state variables
-if "conversation_history" not in st.session_state:
-    st.session_state.conversation_history = []
+if "stage" not in st.session_state:
+    st.session_state.stage = "symptom_input"  # Possible stages: symptom_input, question, diagnosis
 if "current_question" not in st.session_state:
     st.session_state.current_question = None
 if "options" not in st.session_state:
     st.session_state.options = None
-if "selected_option" not in st.session_state:
-    st.session_state.selected_option = None
-if "completed" not in st.session_state:
-    st.session_state.completed = False
+if "disease" not in st.session_state:
+    st.session_state.disease = None
+if "advice" not in st.session_state:
+    st.session_state.advice = None
 
+# Title
 st.title("🩺 DiagnoAI - AI Health Chat")
 
-# **Step 1: Initial Symptom Entry**
-if not st.session_state.current_question and not st.session_state.completed:
-    symptom = st.text_input("Enter your symptoms:")
-    if st.button("Start Diagnosis"):
-        if symptom:
-            response = requests.post(API_URL, json={"user_id": USER_ID, "query": symptom})
-            if response.status_code == 200:
-                ai_response = response.json()["response"]
+# Stage 1: Symptom Input
+if st.session_state.stage == "symptom_input":
+    symptom = st.text_input("Please enter your symptoms below:", placeholder="e.g., fever, headache")
+    
+    if st.button("Submit Symptoms"):
+        if symptom.strip():  # Ensure non-empty input
+            with st.spinner("Processing your symptoms..."):
+                try:
+                    response = requests.post(API_URL, json={"user_id": USER_ID, "query": symptom})
+                    response.raise_for_status()  # Raise exception for bad status codes
+                    ai_response = response.json()["response"]
 
-                # Check if it's a question or final diagnosis
-                if "Question" in ai_response and "Options" in ai_response:
-                    st.session_state.current_question = ai_response["Question"]
-                    st.session_state.options = ai_response["Options"]
-                    st.session_state.selected_option = None  # Reset selected option
-                elif "Disease" in ai_response and "Advice" in ai_response:
-                    st.session_state.completed = True
-                    st.session_state.disease = ai_response["Disease"]
-                    st.session_state.advice = ai_response["Advice"]
-            else:
-                st.error("Error contacting AI. Please try again.")
+                    # Handle the two possible JSON formats
+                    if "Question" in ai_response and "Options" in ai_response:
+                        st.session_state.current_question = ai_response["Question"]
+                        st.session_state.options = ai_response["Options"]
+                        st.session_state.stage = "question"
+                    elif "Disease" in ai_response and "Advice" in ai_response:
+                        st.session_state.disease = ai_response["Disease"]
+                        st.session_state.advice = ai_response["Advice"]
+                        st.session_state.stage = "diagnosis"
+                except requests.RequestException as e:
+                    st.error(f"Error contacting the API: {e}")
+                except KeyError:
+                    st.error("Unexpected response format from API.")
+        else:
+            st.warning("Please enter your symptoms before submitting.")
 
-# **Step 2: Follow-up Question & Options (Only if Question Exists)**
-if st.session_state.current_question and not st.session_state.completed:
+# Stage 2: Follow-up Questions with Options
+elif st.session_state.stage == "question":
     st.write(f"**{st.session_state.current_question}**")
     
-    # Let user select an option but don't change immediately
-    st.session_state.selected_option = st.radio(
-        "Select an option:",
+    # Display radio buttons for options
+    selected_option = st.radio(
+        "Select one option:",
         st.session_state.options,
-        index=None,  # Allow user to make a choice without default selection
-        key="selected_radio"
+        index=None,  # No default selection
+        key=f"radio_{st.session_state.current_question}"  # Unique key to avoid conflicts
     )
     
-    if st.button("Submit Answer") and st.session_state.selected_option:
-        response = requests.post(API_URL, json={"user_id": USER_ID, "query": st.session_state.selected_option})
-        
-        if response.status_code == 200:
-            ai_response = response.json()["response"]
-            
-            # If AI asks another question
-            if "Question" in ai_response and "Options" in ai_response:
-                st.session_state.current_question = ai_response["Question"]
-                st.session_state.options = ai_response["Options"]
-                st.session_state.selected_option = None  # Reset selected option
-            # If AI provides a diagnosis
-            elif "Disease" in ai_response and "Advice" in ai_response:
-                st.session_state.completed = True
-                st.session_state.disease = ai_response["Disease"]
-                st.session_state.advice = ai_response["Advice"]
-                st.session_state.current_question = None  # End the chat
-        else:
-            st.error("Error contacting AI. Please try again.")
+    if st.button("Submit Answer"):
+        if selected_option:  # Ensure an option is selected
+            with st.spinner("Analyzing your answer..."):
+                try:
+                    response = requests.post(API_URL, json={"user_id": USER_ID, "query": selected_option})
+                    response.raise_for_status()
+                    ai_response = response.json()["response"]
 
-# **Step 3: Show Diagnosis Result**
-if st.session_state.completed:
+                    # Handle the next response
+                    if "Question" in ai_response and "Options" in ai_response:
+                        st.session_state.current_question = ai_response["Question"]
+                        st.session_state.options = ai_response["Options"]
+                        # Stage remains "question"
+                    elif "Disease" in ai_response and "Advice" in ai_response:
+                        st.session_state.disease = ai_response["Disease"]
+                        st.session_state.advice = ai_response["Advice"]
+                        st.session_state.stage = "diagnosis"
+                except requests.RequestException as e:
+                    st.error(f"Error contacting the API: {e}")
+                except KeyError:
+                    st.error("Unexpected response format from API.")
+        else:
+            st.warning("Please select an option before submitting.")
+
+# Stage 3: Display Diagnosis
+elif st.session_state.stage == "diagnosis":
     st.subheader("🩺 Diagnosis Result")
     st.success(f"**Disease:** {st.session_state.disease}")
     st.info(f"**Advice:** {st.session_state.advice}")

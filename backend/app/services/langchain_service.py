@@ -9,7 +9,7 @@ load_dotenv()
 
 # Access variable 
 groq_key = os.getenv("GROQ_API_KEY") 
-
+ 
 # Initialize llm
 llm = ChatGroq(
     model="llama-3.3-70b-versatile",

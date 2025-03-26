@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DiagnoAI - AI Health Chat</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #1e1e1e; /* Dark background */
+            color: #e0e0e0; /* Light text */
+        }
+        h1 {
+            color: #3498db; /* Bright blue for title */
+            text-align: center;
+        }
+        .container {
+            background-color: #2c2c2c; /* Darker container */
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5); /* Darker shadow */
+        }
+        .input-section, .question-section, .diagnosis-section {
+            margin-bottom: 20px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #444; /* Darker border */
+            border-radius: 4px;
+            background-color: #3a3a3a; /* Dark input background */
+            color: #e0e0e0; /* Light text */
+        }
+        input[type="text"]::placeholder {
+            color: #888; /* Lighter placeholder */
+        }
+        button {
+            background-color: #3498db; /* Same blue for buttons */
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #2980b9; /* Darker blue on hover */
+        }
+        .options {
+            margin: 10px 0;
+        }
+        .option {
+            margin: 5px 0;
+            color: #e0e0e0; /* Light text for options */
+        }
+        .diagnosis {
+            padding: 15px;
+            border-radius: 4px;
+        }
+        .disease {
+            background-color: #2e4a38; /* Dark green for disease */
+            color: #a9d8b9; /* Light green text */
+            margin-bottom: 10px;
+        }
+        .advice {
+            background-color: #2a4a5e; /* Dark blue for advice */
+            color: #a3cce0; /* Light blue text */
+        }
+        .spinner {
+            display: none;
+            text-align: center;
+            color: #888; /* Gray spinner text */
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🩺 DiagnoAI - AI Health Chat</h1>
+    <div class="container" id="app">
+        <div id="inputSection" class="input-section">
+            <input type="text" id="symptomInput" placeholder="e.g., fever, headache">
+            <button onclick="submitSymptom()">Submit Symptoms</button>
+        </div>
+        <div id="questionSection" class="question-section" style="display: none;">
+            <p id="questionText"></p>
+            <div id="options" class="options"></div>
+            <button onclick="submitAnswer()" id="submitAnswerBtn">Submit Answer</button>
+        </div>
+        <div id="diagnosisSection" class="diagnosis-section" style="display: none;">
+            <div class="diagnosis">
+                <p id="diseaseText" class="disease"></p>
+                <p id="adviceText" class="advice"></p>
+            </div>
+        </div>
+        <div id="spinner" class="spinner">Processing...</div>
+    </div>
+
+    <script>
+        const API_URL = "http://127.0.0.1:8000/chat"; // Replace with your API URL
+        const USER_ID = "989798";
+
+        // DOM Elements
+        const inputSection = document.getElementById("inputSection");
+        const questionSection = document.getElementById("questionSection");
+        const diagnosisSection = document.getElementById("diagnosisSection");
+        const symptomInput = document.getElementById("symptomInput");
+        const questionText = document.getElementById("questionText");
+        const optionsDiv = document.getElementById("options");
+        const diseaseText = document.getElementById("diseaseText");
+        const adviceText = document.getElementById("adviceText");
+        const spinner = document.getElementById("spinner");
+
+        // Show spinner during API calls
+        function showSpinner() {
+            spinner.style.display = "block";
+        }
+
+        function hideSpinner() {
+            spinner.style.display = "none";
+        }
+
+        // Submit initial symptom
+        async function submitSymptom() {
+            const symptom = symptomInput.value.trim();
+            if (!symptom) {
+                alert("Please enter your symptoms.");
+                return;
+            }
+            console.log(symptom);
+            showSpinner();
+            try {
+                const response = await fetch(API_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ user_id: USER_ID, query: symptom })
+                });
+                const data = await response.json();
+                handleResponse(data.response);
+            } catch (error) {
+                alert("Error contacting the API: " + error.message);
+            } finally {
+                hideSpinner();
+            }
+        }
+
+        // Submit selected answer
+        async function submitAnswer() {
+            const selectedOption = document.querySelector('input[name="option"]:checked');
+            if (!selectedOption) {
+                alert("Please select an option.");
+                return;
+            }
+
+            showSpinner();
+            try {
+                const response = await fetch(API_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ user_id: USER_ID, query: selectedOption.value })
+                });
+                const data = await response.json();
+                handleResponse(data.response);
+            } catch (error) {
+                alert("Error contacting the API: " + error.message);
+            } finally {
+                hideSpinner();
+            }
+        }
+
+        // Handle API response
+        function handleResponse(response) {
+            if ("Question" in response && "Options" in response) {
+                // Show question and options
+                inputSection.style.display = "none";
+                questionSection.style.display = "block";
+                diagnosisSection.style.display = "none";
+
+                questionText.textContent = response.Question;
+                optionsDiv.innerHTML = "";
+                response.Options.forEach(option => {
+                    const label = document.createElement("label");
+                    label.className = "option";
+                    label.innerHTML = `
+                        <input type="radio" name="option" value="${option}"> ${option}
+                    `;
+                    optionsDiv.appendChild(label);
+                });
+            } else if ("Disease" in response && "Advice" in response) {
+                // Show diagnosis
+                inputSection.style.display = "none";
+                questionSection.style.display = "none";
+                diagnosisSection.style.display = "block";
+
+                diseaseText.textContent = `Disease: ${response.Disease}`;
+                adviceText.textContent = `Advice: ${response.Advice}`;
+            } else {
+                alert("Unexpected response format from API.");
+            }
+        }
+    </script>
+</body>
+</html>
