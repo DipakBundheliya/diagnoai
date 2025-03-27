@@ -100,7 +100,7 @@
 
     <script>
         const API_URL = "http://127.0.0.1:8000/chat"; // Replace with your API URL
-        const USER_ID = "989798";
+        const USER_ID = "121222445522333999";
 
         // DOM Elements
         const inputSection = document.getElementById("inputSection");
@@ -124,12 +124,12 @@
 
         // Submit initial symptom
         async function submitSymptom() {
-            const symptom = symptomInput.value.trim();
+            var symptom = symptomInput.value.trim();
             if (!symptom) {
                 alert("Please enter your symptoms.");
                 return;
-            }
-            console.log(symptom);
+            } 
+            symptom = "symptom : ".concat(symptom); 
             showSpinner();
             try {
                 const response = await fetch(API_URL, {
@@ -138,6 +138,7 @@
                     body: JSON.stringify({ user_id: USER_ID, query: symptom })
                 });
                 const data = await response.json();
+                console.log(data);
                 handleResponse(data.response);
             } catch (error) {
                 alert("Error contacting the API: " + error.message);
@@ -146,22 +147,27 @@
             }
         }
 
-        // Submit selected answer
+        // Submit selected answer (handling multiple selections)
         async function submitAnswer() {
-            const selectedOption = document.querySelector('input[name="option"]:checked');
-            if (!selectedOption) {
-                alert("Please select an option.");
+            const selectedOptions = document.querySelectorAll('input[name="option"]:checked');
+            
+            if (selectedOptions.length === 0) {
+                alert("Please select at least one option.");
                 return;
             }
 
+            // Merge selected options into a single string
+            const selectedValues = Array.from(selectedOptions).map(opt => opt.value).join("; ");
+            
             showSpinner();
             try {
                 const response = await fetch(API_URL, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ user_id: USER_ID, query: selectedOption.value })
+                    body: JSON.stringify({ user_id: USER_ID, query: selectedValues })
                 });
                 const data = await response.json();
+                console.log(data);
                 handleResponse(data.response);
             } catch (error) {
                 alert("Error contacting the API: " + error.message);
@@ -180,11 +186,13 @@
 
                 questionText.textContent = response.Question;
                 optionsDiv.innerHTML = "";
+
+                // Render options as checkboxes (multiple selections)
                 response.Options.forEach(option => {
                     const label = document.createElement("label");
                     label.className = "option";
                     label.innerHTML = `
-                        <input type="radio" name="option" value="${option}"> ${option}
+                        <input type="checkbox" name="option" value="${option}"> ${option}
                     `;
                     optionsDiv.appendChild(label);
                 });
@@ -196,10 +204,19 @@
 
                 diseaseText.textContent = `Disease: ${response.Disease}`;
                 adviceText.textContent = `Advice: ${response.Advice}`;
+            } else if ("error" in response) {
+                // Show error message
+                inputSection.style.display = "none";
+                questionSection.style.display = "none";
+                diagnosisSection.style.display = "block";
+
+                diseaseText.textContent = `Error from API`;
+                adviceText.textContent = `${response.error}`;
             } else {
-                alert("Unexpected response format from API.");
+                alert("Unexpected response format from API.", response);
             }
-        }
+        }   
+            
     </script>
 </body>
 </html>

@@ -32,7 +32,8 @@ def save_chat_history(user_id: str, query: str, response: str):
     existing_chat = history_collection.find_one({"user_id": user_id})
     
     if existing_chat:
-        if len(existing_chat["conversation"].split("\n")) >= 40 :
+        print("Length of conversation is : ", len(existing_chat["conversation"].split("\n")))
+        if len(existing_chat["conversation"].split("\n")) >= 20 :
             # breakpoint()
             # Filter previous messages when conversation becomes above 40 and summarize it
             total_conversation_len = len(existing_chat["conversation"].split("\n")) + 2 # 2 for the new query and response
